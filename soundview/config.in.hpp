@@ -18,6 +18,14 @@
 
 #include <stdio.h>
 
+/* winders hax */
+
+#ifdef WIN32
+#define LIB_API __declspec(dllexport)
+#else
+#define LIB_API
+#endif
+
 /* Some simple print helpers */
 
 #define DEBUG(...) config::_debug(__FUNCTION__, __VA_ARGS__)
@@ -48,11 +56,11 @@ namespace config {
   /* DONT USE THESE DIRECTLY, use DEBUG()/LOG()/ERROR() instead.
    * The ones with a 'format' function support printf-style format before a list of args.
    * The ones without are for direct unformatted output (eg "_error("func", "printme");") */
-  void _debug(const char* func, const char* format, ...);
-  void _debug(const char* func, ...);
+  void LIB_API _debug(const char* func, const char* format, ...);
+  void LIB_API _debug(const char* func, ...);
 
-  void _log(const char* func, const char* format, ...);
-  void _log(const char* func, ...);
-  void _error(const char* func, const char* format, ...);
-  void _error(const char* func, ...);
+  void LIB_API _log(const char* func, const char* format, ...);
+  void LIB_API _log(const char* func, ...);
+  void LIB_API _error(const char* func, const char* format, ...);
+  void LIB_API _error(const char* func, ...);
 }

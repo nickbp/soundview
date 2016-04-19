@@ -20,10 +20,12 @@
 #include <memory>
 #include <vector>
 
+#include "soundview/config.hpp"
+
 namespace soundview {
   typedef std::function<bool()> status_func_t;
 
-  class DeviceSelector {
+  class LIB_API DeviceSelector {
    public:
     DeviceSelector(status_func_t status_cb);
 

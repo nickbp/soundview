@@ -16,7 +16,14 @@
 
 #include <condition_variable>
 #include <sstream>
+
+#ifdef WIN32
+#include <windows.h>
+#define SLEEP(x) Sleep(x)
+#else
 #include <unistd.h>
+#define SLEEP(x) sleep(x)
+#endif
 
 #include <SFML/Audio/SoundRecorder.hpp>
 
@@ -183,7 +190,7 @@ bool soundview::DeviceSelector::auto_select(std::string& device) {
         // user has closed window, give up
         return false;
       }
-      sleep(1);
+      SLEEP(1);
     }
   }
 }

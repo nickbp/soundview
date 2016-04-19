@@ -12,9 +12,13 @@ The code is standard C++11 with the following dependencies:
 * [SFML](http://www.sfml-dev.org/) (specifically SFML-Audio and SFML-Graphics) for interacting with system hardware
 * [fftw](http://www.fftw.org/) for FFT of the audio stream
 
-All of these tools are built with cross-platform support in mind, and therefore SoundView should inherit that property (fingers crossed).
+All of these tools are built with cross-platform support in mind, and therefore SoundView should more or less inherit that support.
+
+In theory at least.
 
 ### Debian and Ubuntu
+
+Here's the steps to build on an `apt`-based system, with your choice of compiler:
 
 #### GCC
 
@@ -50,6 +54,8 @@ cd apps
 
 ### Fedora and Red Hat
 
+Here's the steps to build on a `yum`-based system, with your choice of compiler:
+
 #### GCC
 
 ```sh
@@ -84,7 +90,46 @@ cd apps
 
 ### Windows
 
-TODO
+These steps assume a Win64 build. These are just what worked for me at the time, on a system running Windows 8.1. YMMV.
+
+#### Downloads
+
+- [7zip](http://www.7-zip.org/download.html) since fftw comes in `.tar.gz` format
+- [Visual Studio](https://www.visualstudio.com/en-us/products/visual-studio-community-vs.aspx) (14 aka 2015)
+- [git](https://git-scm.com/downloads) (or use git included in VS?)
+- [CMake](https://cmake.org/download/) (3.5.2)
+- [SFML](http://www.sfml-dev.org/download.php) (2.3.2: "Visual C++ 14 (2015) - 64-bit")
+- [FFTW binaries](http://www.fftw.org/install/windows.html) (3.3.4-dll64)
+- [FFTW headers/source](http://www.fftw.org/download.html) (3.3.4)
+
+#### Approx Build Steps
+
+1. Grab the `soundview` repo with `git clone`.
+2. Generate `.lib` files for FFTW:
+  - Do the `lib /def` stuff mentioned in [the FFTW instructions](http://www.fftw.org/install/windows.html) using 'Developer Command Prompt'.
+  - For 64bit, include an additional `/machine:x64` flag to the specified `lib` command.
+3. Set up CMake using `cmake-gui.exe`:
+  1. Set source dir to root-level `soundview/`, binary dir to whatever.
+  2. Hit `Configure`. In the window that pops up, select `Visual Studio 14 2015 Win64` (or whatever's appropriate for you).
+  3. After waiting for config to finish, CMake's `-NOTFOUND` variables need to be configured:
+    - `fftw_INCLUDE_DIR` = `fftw-<ver>/api/` (unpacked from the FFTW `.tar.gz` with headers/source)
+    - `fftw_LIBRARY` = `fftw-<ver>-dll64/libfftw3-3.lib` (unpacked and generated from the FFTW `.tar.gz` with binaries)
+    - `sfml_INCLUDE_DIR` = `SFML-<ver>-windows-vc14-64-bit/SFML-<ver>/include/`
+    - `sfml_*_LIBRARY` = matching `SFML-<ver>-windows-vc14-64-bit/SFML-<ver>/lib/sfml-*.lib` (ignore any `-d`/`-s`/`-s-d` versions)
+  4. Hit `Configure` again and observe that the red rows get cleared.
+  5. Hit `Generate` to create `<binary dir>/soundview.sln`.
+4. Open Visual Studio and point it to the generated `<binary dir>/soundview.sln` created above.
+5. Create a **RELEASE** build for the `soundview` project. There will be a lot of warnings since by default this project configures VS to be very pedantic.
+6. Browse to `<binary dir>/Release/apps/`, which should contain `soundview.exe`. Copy the following libraries into `<binary dir>/Release/apps/`:
+  - `<binary dir>/soundview/Release/soundview.dll`
+  - `fftw-<ver>-dll64/libfftw3-3.dll`
+  - `SFML-<ver>-windows-vc14-64-bit/SFML-<ver>/bin/`: `sfml-audio-2.dll`, `sfml-graphics-2.dll`, `sfml-system-2.dll`, and `sfml-window-2.dll`
+
+With the `.dll`'s copied into the same directory as `soundview.exe`, you should now be able to run it. It can also be run via the console to see what audio devices it's finding.
+
+If you're just seeing slowly extending vertical streaks, then it means SoundView effectively isn't getting any audio. Check the console output to see what devices are being found, and how much audio they're producing. If devices are producing less than a million "amplitude units" in the console output log, they're basically not producing audio.
+
+The root problem is that Windows doesn't make it easy to tap into whatever audio is currently playing on the system. Your options are to either just display external audio that's brought in via the microphone jack, or to install software that creates a loopback audio device, like [this](http://software.muzychenko.net/eng/vac.htm#download) or [this](http://www.nerds.de/en/loopbeaudio.html), to create a recordable device that mirrors what is currently playing on the system.
 
 ### OSX
 
@@ -93,6 +138,8 @@ TODO
 ## Usage
 
 Keyboard shortcuts, features, and options are exposed through the help displayed by `./soundview -h`. Here's some additional information on configuring some of those options.
+
+Note: Commandline arguments are currently unavailable on Windows, since Windows didn't have `getopt.h` and I'm not about to pull in another dependency just so that Windows has arg handling.
 
 ### Device Selection
 
