@@ -19,3 +19,5 @@ target_link_libraries(soundview
   ${fftw_LIBRARY}
   ${sfml_audio_LIBRARY}
   ${sfml_graphics_LIBRARY})
+
+install(TARGETS soundview LIBRARY DESTINATION lib)
