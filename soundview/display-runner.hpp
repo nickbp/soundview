@@ -21,6 +21,7 @@
 #include <thread>
 #include <vector>
 
+#include "soundview/config.hpp"
 #include "soundview/options.hpp"
 
 namespace soundview {
@@ -32,7 +33,7 @@ namespace soundview {
    * Wrapper for accepting frequency data and displaying it.
    * Mainly handles threading for an underlying DisplayImpl.
    */
-  class DisplayRunner {
+  class LIB_API DisplayRunner {
    public:
     DisplayRunner(const Options& options, reload_device_func_t reload_device_func);
     virtual ~DisplayRunner();

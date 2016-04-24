@@ -20,6 +20,7 @@
 
 #include <SFML/Audio/SoundRecorder.hpp>
 
+#include "soundview/config.hpp"
 #include "soundview/options.hpp"
 
 namespace soundview {
@@ -29,7 +30,7 @@ namespace soundview {
   /**
    * Implementation for retrieving audio samples from a device.
    */
-  class SoundRecorder : public sf::SoundRecorder {
+  class LIB_API SoundRecorder : public sf::SoundRecorder {
    public:
     SoundRecorder(const Options& options, std::shared_ptr<TransformerBuffer> buf);
 

@@ -21,6 +21,7 @@
 #include <memory>
 #include <vector>
 
+#include "soundview/config.hpp"
 #include "soundview/options.hpp"
 
 struct fftw_plan_s;
@@ -32,7 +33,7 @@ namespace soundview {
   /**
    * Transfroms PCM data to frequency data (via FFT)
    */
-  class TransformerBuffer {
+  class LIB_API TransformerBuffer {
    public:
     TransformerBuffer(const Options& options, buf_func_t freq_output_cb);
     virtual ~TransformerBuffer();

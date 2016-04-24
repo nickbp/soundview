@@ -19,6 +19,12 @@
 
 #include <fftw3.h>
 
+#ifdef WIN32
+#define MIN(x,y) ((x < y) ? x : y)
+#else
+#define MIN(x,y) (std::min(x,y))
+#endif
+
 // Double the size of the fft_plan buffers: Everything past halfway is zero
 soundview::TransformerBuffer::TransformerBuffer(
     const Options& options, buf_func_t freq_output_cb)
@@ -47,7 +53,7 @@ void soundview::TransformerBuffer::add(const int16_t* samples, size_t samples_le
   // append samples to buf. as buf limit is reached (>=0 times), transform and emit transformed
   size_t samples_offset = 0;
   for (;;) {
-    size_t copy_size = std::min(
+    size_t copy_size = MIN(
         samples_len - samples_offset, // remaining samples to copy
         buf_pcm.size() - buf_pcm_filled); // remaining space in buffer
     {

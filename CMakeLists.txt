@@ -16,41 +16,59 @@ else()
   message(ERROR "Didn't find FFTW3")
 endif()
 
-find_path(sfml_audio_INCLUDE_DIR NAMES SFML/Audio.hpp)
+find_path(sfml_INCLUDE_DIR NAMES SFML/Graphics.hpp)
+if(NOT sfml_INCLUDE_DIR)
+  message(ERROR "Didn't find SFML include dir")
+endif()
+
 find_library(sfml_audio_LIBRARY NAMES sfml-audio)
-if(sfml_audio_INCLUDE_DIR AND sfml_audio_LIBRARY)
+if(sfml_audio_LIBRARY)
   message(STATUS "Found SFML-Audio")
 else()
   message(ERROR "Didn't find SFML-Audio")
 endif()
 
-find_path(sfml_graphics_INCLUDE_DIR NAMES SFML/Graphics.hpp)
 find_library(sfml_graphics_LIBRARY NAMES sfml-graphics)
-if(sfml_graphics_INCLUDE_DIR AND sfml_graphics_LIBRARY)
+if(sfml_graphics_LIBRARY)
   message(STATUS "Found SFML-Graphics")
 else()
   message(ERROR "Didn't find SFML-Graphics")
+endif()
+
+# These are only needed on Windows; non-Windows includes them transitively.
+if(WIN32)
+  find_library(sfml_system_LIBRARY NAMES sfml-system)
+  if(sfml_system_LIBRARY)
+    message(STATUS "Found SFML-System")
+  else()
+    message(ERROR "Didn't find SFML-System")
+  endif()
+  find_library(sfml_window_LIBRARY NAMES sfml-window)
+  if(sfml_window_LIBRARY)
+    message(STATUS "Found SFML-Window")
+  else()
+    message(ERROR "Didn't find SFML-Window")
+  endif()
 endif()
 
 include_directories(
   ${CMAKE_SOURCE_DIR}
   ${CMAKE_BINARY_DIR} # for generated config.hpp
   ${fftw_INCLUDE_DIR}
-  ${sfml_audio_INCLUDE_DIR}
-  ${sfml_graphics_INCLUDE_DIR})
+  ${sfml_INCLUDE_DIR})
 
 # Enable C++11 and more warnings
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+if(CMAKE_CXX_COMPILER_ID STREQUAL GNU)
   set(CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wextra")
-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL Clang)
   set(CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wextra")
-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Intel")
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL Intel)
   if(WIN32)
     set(CMAKE_CXX_FLAGS "/Qstd=c++11 -diag-enable sc")
   else()
     set(CMAKE_CXX_FLAGS "-std=c++11 /Qdiag-enable:sc")
   endif()
-elseif(${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL MSVC)
   set(CMAKE_CXX_FLAGS "/Wall")
 endif()
 
