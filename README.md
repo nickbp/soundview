@@ -133,7 +133,20 @@ The root problem is that Windows doesn't make it easy to tap into whatever audio
 
 ### OSX
 
-TODO
+1. clone git repo
+2. install xcode
+3. get cmake for osx
+4. download the fftw3 .deb provided by fink
+   - unpack .deb with `tar xzvf`
+   - then `tar xzvf data.tar.gz`
+   - see `sw/lib/libfftw<ver>.dylib`
+5. download sfml mac package. observe `/include` and `/lib/libsfml-*.dylib`
+6. start cmake, point it to srcdir `soundview/`, builddir wherever
+   - fftw incl: `sw/include/`, fftw lib: `sw/lib/libfftw<ver>.dylib`
+   - sfml incl: `SFML-<ver>-osx-clang-universal/include/`, sfml libs: `SFML-<ver>-osx-clang-universal/lib/libsfml-*.<ver>.dylib`
+7. start xcode, hit tiny `Open another project...` button, pick `<builddir>/soundview.xcodeproj`
+8. run the build in xcode, success! now you just need to turn this into a usable binary. good luck!
+(this snowflake is harder to figure out than visual studio. docs PRs are welcome)
 
 ## Usage
 

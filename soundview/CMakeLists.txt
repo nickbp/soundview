@@ -30,7 +30,7 @@ target_link_libraries(soundview
   ${fftw_LIBRARY}
   ${sfml_audio_LIBRARY}
   ${sfml_graphics_LIBRARY})
-if(WIN32)
+if(NEED_ADDITIONAL_SFML)
   target_link_libraries(soundview
     ${sfml_system_LIBRARY}
     ${sfml_window_LIBRARY})

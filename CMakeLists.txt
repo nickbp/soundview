@@ -35,8 +35,9 @@ else()
   message(ERROR "Didn't find SFML-Graphics")
 endif()
 
-# These are only needed on Windows; non-Windows includes them transitively.
-if(WIN32)
+# These are only needed if they aren't automatically included transitively.
+set(NEED_ADDITIONAL_SFML (WIN32 OR ${CMAKE_SYSTEM_NAME} MATCHES "Darwin"))
+if(NEED_ADDITIONAL_SFML)
   find_library(sfml_system_LIBRARY NAMES sfml-system)
   if(sfml_system_LIBRARY)
     message(STATUS "Found SFML-System")

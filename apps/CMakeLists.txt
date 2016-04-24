@@ -3,6 +3,7 @@ cmake_minimum_required (VERSION 2.6)
 project(apps)
 
 set(SRCS soundview.cpp)
+# Windows doesn't have standard getopt.h
 if(NOT WIN32)
   list(APPEND SRCS
     cmdline-options.cpp
