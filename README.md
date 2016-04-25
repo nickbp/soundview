@@ -143,7 +143,7 @@ The root problem is that Windows doesn't make it easy to tap into whatever audio
 6. start cmake, point it to srcdir `soundview/`, builddir wherever
    - cmake should automatically find the correct locations for FFTW and SFML. If not, point it to wherever you have Homebrew set up to install them.
 7. start xcode, open `<builddir>/soundview.xcodeproj`
-8. run the build in xcode, success! now you just need to turn this into a usable binary. good luck! the problem is that the developer is trying to create the window somewhere other than the main thread, which doesn't work on OS X (all GUI stuff has to be done on the main thread in OS X). SFML detects this and refuses to even try, and because the program doesn't have a window it immediately exits.
+8. run the build in xcode, success! now you just need to turn this into a usable binary. good luck! the problem is that soundview tries to create the window in a worker thread, which doesn't work on OS X (all GUI stuff is required to be done on the main thread in OS X). SFML detects this and refuses to even try, and because the program doesn't have a window it immediately exits.
 
 ## Usage
 
