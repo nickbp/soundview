@@ -24,7 +24,7 @@ Here's the steps to build on an `apt`-based system, with your choice of compiler
 
 ```sh
 sudo apt-get update
-sudo apt-get install build-essential cmake git libsfml-dev libfftw-dev
+sudo apt-get install build-essential cmake git libsfml-dev libfftw3-dev
 
 git clone git@github.com:nickbp/soundview.git
 
@@ -40,7 +40,7 @@ cd apps
 
 ```sh
 sudo apt-get update
-sudo apt-get install clang-3.8 cmake git libsfml-dev libfftw-dev
+sudo apt-get install clang-3.8 cmake git libsfml-dev libfftw3-dev
 
 git clone git@github.com:nickbp/soundview.git
 
