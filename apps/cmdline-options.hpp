@@ -16,12 +16,14 @@
 
 #pragma once
 
-#include <string.h>
-
+#include <memory>
 #include <string>
-#include <unordered_map>
 
 #include "soundview/options.hpp"
+
+namespace cxxopts {
+  class Options;
+}
 
 /**
  * Implementation of Options which parses values out of cmdline args.
@@ -50,16 +52,7 @@ class CmdlineOptions : public soundview::Options {
   size_t voiceprint_scroll_rate() const;
   size_t loudness_adjust_rate() const;
 
-  typedef std::unordered_map<std::string, std::string> args_t;
-
  private:
-  void help_and_exit() const;
-
-  bool parse_b(const std::string& name) const;
-  std::string parse_s(const std::string& name) const;
-  size_t parse_u(const std::string& name, size_t min_opt, size_t* max_opt = NULL) const;
-  double parse_d(const std::string& name) const;
-
-  const std::string app_name;
-  args_t args;
+  // would use unique_ptr, but that's incompatible with fwd-decl
+  std::shared_ptr<cxxopts::Options> options;
 };

@@ -22,6 +22,10 @@ namespace config {
   FILE *fout = stdout, *ferr = stderr;
   bool debug_enabled = false;
 
+  void enable_debug() {
+    debug_enabled = true;
+  }
+
   void _debug(const char* func, const char* format, ...) {
     if (debug_enabled) {
       va_list args;
@@ -32,6 +36,7 @@ namespace config {
       vfprintf(fout, format, args);
       va_end(args);
       fprintf(fout, "\n");
+      fflush(fout);
     }
   }
   void _debug(const char* func, ...) {
@@ -43,6 +48,7 @@ namespace config {
       }
       vfprintf(fout, "%s\n", args);//only one arg, the string itself
       va_end(args);
+      fflush(fout);
     }
   }
 
@@ -55,6 +61,7 @@ namespace config {
     vfprintf(fout, format, args);
     va_end(args);
     fprintf(fout, "\n");
+    fflush(fout);
   }
   void _log(const char* func, ...) {
     va_list args;
@@ -64,6 +71,7 @@ namespace config {
     }
     vfprintf(fout, "%s\n", args);//only one arg, the string itself
     va_end(args);
+    fflush(fout);
   }
 
   void _error(const char* func, const char* format, ...) {
@@ -75,6 +83,7 @@ namespace config {
     vfprintf(ferr, format, args);
     va_end(args);
     fprintf(ferr, "\n");
+    fflush(ferr);
   }
   void _error(const char* func, ...) {
     va_list args;
@@ -84,5 +93,6 @@ namespace config {
     }
     vfprintf(ferr, "%s\n", args);//only one arg, the string itself
     va_end(args);
+    fflush(ferr);
   }
 }

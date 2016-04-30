@@ -15,9 +15,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include "apps/cmdline-options.hpp"
-#ifdef WIN32
-#include "apps/default-options.hpp"
-#endif
 #include "soundview/config.hpp"
 #include "soundview/device-selector.hpp"
 #include "soundview/display-runner.hpp"
@@ -97,11 +94,7 @@ namespace {
 }
 
 int main(int argc, char* argv[]) {
-#ifdef WIN32
-  DefaultOptions options;
-#else
   CmdlineOptions options(argc, argv);
-#endif
 
   DeviceReloader reloader(options);
   soundview::reload_device_func_t reload_device_func

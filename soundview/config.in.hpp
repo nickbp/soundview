@@ -51,7 +51,7 @@ namespace config {
   extern FILE *fout;
   extern FILE *ferr;
 
-  extern bool debug_enabled;
+  void LIB_API enable_debug();
 
   /* DONT USE THESE DIRECTLY, use DEBUG()/LOG()/ERROR() instead.
    * The ones with a 'format' function support printf-style format before a list of args.

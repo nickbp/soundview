@@ -20,6 +20,7 @@
 #include <fftw3.h>
 
 #ifdef WIN32
+// no std::min
 #define MIN(x,y) ((x < y) ? x : y)
 #else
 #define MIN(x,y) (std::min(x,y))

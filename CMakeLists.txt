@@ -53,6 +53,7 @@ if(NEED_ADDITIONAL_SFML)
 endif()
 
 include_directories(
+  ${CMAKE_SOURCE_DIR}/3rdparty/
   ${CMAKE_SOURCE_DIR}
   ${CMAKE_BINARY_DIR} # for generated config.hpp
   ${fftw_INCLUDE_DIR}

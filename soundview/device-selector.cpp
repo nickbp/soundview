@@ -18,6 +18,7 @@
 #include <sstream>
 
 #ifdef WIN32
+// think different
 #include <windows.h>
 #define SLEEP(x) Sleep(x)
 #else
