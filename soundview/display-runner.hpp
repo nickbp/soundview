@@ -39,7 +39,7 @@ namespace soundview {
     virtual ~DisplayRunner();
 
     /**
-     * Appends freq data to be displayed.
+     * Appends freq data to be displayed, or returns false if not ready yet.
      */
     bool append_freq_data(const std::vector<double>& freq_data);
 
@@ -49,17 +49,11 @@ namespace soundview {
     bool check_running();
 
     /**
-     * Blocks until the display has finished running.
+     * Runs the display, blocking until it has finished.
      */
-    void wait();
-
-    /**
-     * Tells the display to stop running.
-     */
-    void exit();
+    void run();
 
    private:
     std::unique_ptr<DisplayImpl> display_impl;
-    std::unique_ptr<std::thread> thread;
   };
 }

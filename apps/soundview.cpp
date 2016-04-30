@@ -19,7 +19,6 @@
 #include "soundview/device-selector.hpp"
 #include "soundview/display-runner.hpp"
 #include "soundview/sound-recorder.hpp"
-#include "soundview/transformer-buffer.hpp"
 
 namespace sp = std::placeholders;
 
@@ -97,15 +96,11 @@ int main(int argc, char* argv[]) {
   CmdlineOptions options(argc, argv);
 
   DeviceReloader reloader(options);
-  soundview::reload_device_func_t reload_device_func
-    = std::bind(&::DeviceReloader::reload, &reloader);
 
-  auto display = std::make_shared<soundview::DisplayRunner>(options, reload_device_func);
-  soundview::buf_func_t display_freq_data_func
-    = std::bind(&soundview::DisplayRunner::append_freq_data, display.get(), sp::_1);
-  soundview::status_func_t check_status_func
-    = std::bind(&soundview::DisplayRunner::check_running, display.get());
-  soundview::DeviceSelector selector(check_status_func);
+  soundview::DisplayRunner display_runner(options, std::bind(&::DeviceReloader::reload, &reloader));
+
+  soundview::DeviceSelector selector(
+      std::bind(&soundview::DisplayRunner::check_running, &display_runner));
   reloader.set_selector(&selector);
 
   if (options.list_devices()) {
@@ -117,18 +112,17 @@ int main(int argc, char* argv[]) {
     exit(0);
   }
 
-  auto buf = std::make_shared<soundview::TransformerBuffer>(options, display_freq_data_func);
-  soundview::SoundRecorder recorder(options, buf);
+  soundview::SoundRecorder recorder(options,
+      std::bind(&soundview::DisplayRunner::append_freq_data, &display_runner, sp::_1));
   reloader.set_recorder(&recorder);
 
   if (reloader.start()) {
-    display->wait();
+    display_runner.run();
     LOG("Exiting.");
     recorder.stop();
     return 0;
   } else {
     LOG("Failed to start sound recorder. Exiting.");
-    display->exit();
     recorder.stop();
     return -1;
   }

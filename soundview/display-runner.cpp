@@ -20,9 +20,7 @@
 #include "soundview/hsl.hpp"
 
 soundview::DisplayRunner::DisplayRunner(const Options& options, reload_device_func_t reload_device_func)
-  : display_impl(new DisplayImpl(options, reload_device_func)),
-    thread(new std::thread(std::bind(&soundview::DisplayImpl::run, display_impl.get()))) {
-}
+  : display_impl(new DisplayImpl(options, reload_device_func)) { }
 
 soundview::DisplayRunner::~DisplayRunner() { }
 
@@ -34,16 +32,7 @@ bool soundview::DisplayRunner::check_running() {
   return (bool) display_impl;
 }
 
-void soundview::DisplayRunner::wait() {
-  thread->join();
-  thread.reset();
+void soundview::DisplayRunner::run() {
+  display_impl->run();
   display_impl.reset();
-}
-
-void soundview::DisplayRunner::exit() {
-  if (!display_impl) {
-    return;
-  }
-  display_impl->exit();
-  wait();
 }

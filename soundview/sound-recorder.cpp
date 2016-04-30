@@ -16,10 +16,9 @@
 
 #include "soundview/config.hpp"
 #include "soundview/sound-recorder.hpp"
-#include "soundview/transformer-buffer.hpp"
 
-soundview::SoundRecorder::SoundRecorder(const Options& options, std::shared_ptr<TransformerBuffer> buf)
-  : buf(buf) {
+soundview::SoundRecorder::SoundRecorder(const Options& options, buf_func_t freq_output_cb)
+  : buf(options, freq_output_cb) {
   auto period = sf::seconds(1 / ((double)options.audio_collect_rate_hz()));
   setProcessingInterval(period);
 }
@@ -36,11 +35,11 @@ bool soundview::SoundRecorder::onProcessSamples(const int16_t* samples, size_t s
     }
   }
   DEBUG("got %lu samples, sum=%ld", samples_len, sum);
-  buf->add(samples, samples_len);
+  buf.add(samples, samples_len);
   return true;
 }
 
 void soundview::SoundRecorder::onStop() {
-  buf->reset();
+  buf.reset();
 }
 
