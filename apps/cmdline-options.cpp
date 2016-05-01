@@ -62,11 +62,17 @@ namespace {
     }
     return val;
   }
+
+  std::string get_version() {
+    std::ostringstream oss;
+    oss << "\n  v" << config::VERSION_STRING << " (" << config::BUILD_DATE << ")";
+    return oss.str();
+  }
 }
 
 
 CmdlineOptions::CmdlineOptions(int argc, char* argv[])
-: options(new cxxopts::Options(argv[0])) {
+: options(new cxxopts::Options(argv[0], get_version())) {
 
   options->add_options()
     ("h," HELP,
