@@ -72,6 +72,11 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL MSVC)
   set(CMAKE_CXX_FLAGS "/Wall")
 endif()
 
+# Disable some garbage pointless warning
+if(APPLE)
+  set(CMAKE_MACOSX_RPATH ON)
+endif()
+
 add_subdirectory(apps)
 add_subdirectory(soundview)
 

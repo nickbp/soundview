@@ -94,56 +94,74 @@ These steps assume a Win64 build. These are just what worked for me at the time,
 
 #### Downloads
 
-- [7zip](http://www.7-zip.org/download.html) since fftw comes in `.tar.gz` format
+The following are prerequisite tools/libraries to building SoundView on Windows. Install/unpack these before proceeding below.
+
+- [7zip](http://www.7-zip.org/download.html) since FFTW comes in `.tar.gz` format
 - [Visual Studio](https://www.visualstudio.com/en-us/products/visual-studio-community-vs.aspx) (14 aka 2015)
 - [git](https://git-scm.com/downloads) (or use git included in VS?)
 - [CMake](https://cmake.org/download/) (3.5.2)
+- [NSIS](http://nsis.sourceforge.net/Download) (2.51: technically optional, used to make install package)
 - [SFML](http://www.sfml-dev.org/download.php) (2.3.2: "Visual C++ 14 (2015) - 64-bit")
 - [FFTW binaries](http://www.fftw.org/install/windows.html) (3.3.4-dll64)
-- [FFTW headers/source](http://www.fftw.org/download.html) (3.3.4)
 
-#### Approx Build Steps
+#### Build Steps
 
 1. Grab the `soundview` repo with `git clone`.
 2. Generate `.lib` files for FFTW:
   - Do the `lib /def` stuff mentioned in [the FFTW instructions](http://www.fftw.org/install/windows.html) using 'Developer Command Prompt'.
-  - For 64bit, include an additional `/machine:x64` flag to the specified `lib` command.
+  - For a 64bit build (which is what these instructions are doing), include an additional `/machine:x64` flag to the specified `lib` command.
 3. Set up CMake using `cmake-gui.exe`:
-  1. Set source dir to root-level `soundview/`, binary dir to whatever.
-  2. Hit `Configure`. In the window that pops up, select `Visual Studio 14 2015 Win64` (or whatever's appropriate for you).
-  3. After waiting for config to finish, CMake's `-NOTFOUND` variables need to be configured:
-    - `fftw_INCLUDE_DIR` = `fftw-<ver>/api/` (unpacked from the FFTW `.tar.gz` with headers/source)
-    - `fftw_LIBRARY` = `fftw-<ver>-dll64/libfftw3-3.lib` (unpacked and generated from the FFTW `.tar.gz` with binaries)
-    - `sfml_INCLUDE_DIR` = `SFML-<ver>-windows-vc14-64-bit/SFML-<ver>/include/`
-    - `sfml_*_LIBRARY` = matching `SFML-<ver>-windows-vc14-64-bit/SFML-<ver>/lib/sfml-*.lib` (ignore any `-d`/`-s`/`-s-d` versions)
-  4. Hit `Configure` again and observe that the red rows get cleared.
+  1. Set source dir to root-level `soundview/`, binary dir to anything.
+  2. Hit `Configure`. In the window that pops up, select `Visual Studio 14 2015 Win64`, or whatever's appropriate for you.
+  3. After waiting for config to finish, two paths need to be configured:
+    - `fftw_BASE_DIR` = `path/to/fftw-<ver>-dll64/` - Within the unpacked copy of FFTW downloaded earlier. Contains `fftw.h`, `libfftw3-3.lib`, and `libfftw3-3.dll`.
+    - `sfml_BASE_DIR` = `path/to/SFML-<ver>-windows-vc14-64-bit/SFML-<ver>/` - Within the unpacked copy of SFML downloaded earlier. Contains dirs named `bin`, `include`, and `lib`.
+  4. Hit `Configure` again and observe that a bunch of new paths are resolved from within these directories.
   5. Hit `Generate` to create `<binary dir>/soundview.sln`.
-4. Open Visual Studio and point it to the generated `<binary dir>/soundview.sln` created above.
-5. Create a **RELEASE** build for the `soundview` project. There will be a lot of warnings since by default this project configures VS to be very pedantic.
-6. Browse to `<binary dir>/Release/apps/`, which should contain `soundview.exe`. Copy the following libraries into `<binary dir>/Release/apps/`:
-  - `<binary dir>/soundview/Release/soundview.dll`
-  - `fftw-<ver>-dll64/libfftw3-3.dll`
-  - `SFML-<ver>-windows-vc14-64-bit/SFML-<ver>/bin/`: `sfml-audio-2.dll`, `sfml-graphics-2.dll`, `sfml-system-2.dll`, and `sfml-window-2.dll`
+4. Open Visual Studio and point it to the generated `<binary dir>/soundview.sln` generated above.
+5. Now you can create the build in Visual Studio in one of two ways: Creating an installer (needs NSIS, see above), or just creating the base build.
+  - Build an installer package:
+    1. Create a **RELEASE** build of the `PACKAGE` project. There will be a lot of warnings since by default this project configures VS to be very pedantic.
+    2. Browse to `<binary dir>`, which should contain `SoundView-<ver>-win64.exe`.
+  - Just build the .exe:
+    1. Create a **RELEASE** build of the `soundview-app` project. There will be a lot of warnings since by default this project configures VS to be very pedantic.
+    2. Browse to `<binary dir>/Release/apps/`, which should contain `soundview.exe`. Copy the following libraries into `<binary dir>/Release/apps/`:
+      - `<binary dir>/soundview/Release/soundview.dll`
+      - `fftw-<ver>-dll64/libfftw3-3.dll`
+      - `SFML-<ver>-windows-vc14-64-bit/SFML-<ver>/bin/`: `sfml-audio-2.dll`, `sfml-graphics-2.dll`, `sfml-system-2.dll`, and `sfml-window-2.dll`
+    3. With the `.dll`'s copied into the same directory as `soundview.exe`, you should now be able to run it.
 
-With the `.dll`'s copied into the same directory as `soundview.exe`, you should now be able to run it. It can also be run via the console to see what audio devices it's finding.
-
-If you're just seeing slowly extending vertical streaks, then it means SoundView effectively isn't getting any audio. Check the console output to see what devices are being found, and how much audio they're producing. If devices are producing less than a million "amplitude units" in the console output log, they're basically not producing audio.
+If you're just seeing slowly extending vertical streaks (or horizontal after pressing Space), it's a sign that SoundView effectively isn't getting any audio. Check the console output to see what devices are being found, and how much audio they're producing. If devices are producing fewer than several thousand "amplitude units" in the console output log, they're basically not producing audio.
 
 The root problem is that Windows doesn't make it easy to tap into whatever audio is currently playing on the system. Your options are to either just display external audio that's brought in via the microphone jack, or to install software that creates a loopback audio device, like [this](http://software.muzychenko.net/eng/vac.htm#download) or [this](http://www.nerds.de/en/loopbeaudio.html), to create a recordable device that mirrors what is currently playing on the system.
 
 ### OSX
 
-1. clone git repo
-2. install xcode
-3. get cmake for osx
-4. download and install FFTW with homebrew:
-   - `brew install fftw`
-5. download and install SFML with homebrew:
-   - `brew install sfml`
-6. start cmake, point it to srcdir `soundview/`, builddir wherever
-   - cmake should automatically find the correct locations for FFTW and SFML. If not, point it to wherever you have Homebrew set up to install them.
-7. start xcode, open `<builddir>/soundview.xcodeproj`
-8. run the build in xcode, success! now you just need to turn this into a usable binary. good luck! the problem is that soundview tries to create the window in a worker thread, which doesn't work on OS X (all GUI stuff is required to be done on the main thread in OS X). SFML detects this and refuses to even try, and because the program doesn't have a window it immediately exits.
+These steps have been tried on 10.10.
+
+#### Downloads
+
+The following are prerequisite tools/libraries to building SoundView on OSX. Install/unpack these before proceeding below.
+
+- [XCode](https://developer.apple.com/xcode/download/)
+- [git](https://git-scm.com/downloads)
+- [CMake](https://cmake.org/download/) (3.5.2)
+- Libraries via [Homebrew](http://brew.sh):
+  - `brew install fftw`
+  - `brew install sfml`
+
+#### Build Steps
+
+1. Grab the `soundview` repo with `git clone`.
+2. Set up CMake using `cmake`:
+  1. Set source dir to root-level `soundview/`, binary dir to anything.
+  2. Hit `Configure`. In the window that pops up, select `Xcode`, or whatever's appropriate for you. Select `Unix Makefiles` to skip opening XCode and instead just run `make -j4` via the commandline to build `<builddir>/apps/soundview`.
+  3. CMake should automatically find the versions of FFTW and SFML that you installed via Homebrew earlier, likely under `/usr/local/...`. If not, update `fftw_BASE_DIR` and `sfml_BASE_DIR` to point to them, and re-attempt `Configure`.
+  4. Hit `Generate` to create the XCode project.
+3. Start XCode, open `<builddir>/soundview.xcodeproj`
+  - Build the project in XCode, then browse to `<builddir>/apps/Debug` and run the `soundview` executable.
+
+By default, SoundView seems to only find the microphone on OSX, even when a USB hardware mixer shows up as a device in "Sound". So OSX may just have poor audio support in SFML, or it may have just been the machine I was borrowing for writing these steps.
 
 ## Usage
 

@@ -4,8 +4,7 @@ project(src)
 
 configure_file (
   "${PROJECT_SOURCE_DIR}/config.in.hpp"
-  "${PROJECT_BINARY_DIR}/config.hpp"
-  )
+  "${PROJECT_BINARY_DIR}/config.hpp")
 
 # Header files are just provided for IDEs (particularly VS)
 add_library(soundview SHARED
