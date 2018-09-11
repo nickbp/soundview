@@ -26,7 +26,7 @@
 #define SLEEP(x) sleep(x)
 #endif
 
-#include <SFML/Audio/SoundRecorder.hpp>
+#include <SDL2/SDL_audio.h>
 
 #include "soundview/config.hpp"
 #include "soundview/device-selector.hpp"
@@ -43,16 +43,15 @@ namespace {
    * device, and returns the sum amplitudes from that sample. This is used as
    * a measure of how active a given audio device is.
    */
-  class AmplitudeSummer : public sf::SoundRecorder {
+  class AmplitudeSummer {
    public:
     AmplitudeSummer(const std::string& device)
-      : samples_left(SAMPLE_COUNT),
+      : device(device),
+        samples_left(SAMPLE_COUNT),
         sum_(0),
         mutex(),
         cv_notify(),
         ready_to_stop(false) {
-      setProcessingInterval(sf::seconds(SECS_PER_ROUND));
-      setDevice(device);
     }
 
     bool run(size_t &sum) {
@@ -60,10 +59,29 @@ namespace {
       if (ready_to_stop) {
         return false;
       }
-      // Start sample processing thread, which is what calls onProcessSamples().
-      if (!start()) {
+
+      SDL_AudioSpec desired, obtained;
+      SDL_zero(&desired);
+      // Just go with something super basic and low-quality:
+      desired.freq = 11025;
+      desired.format = AUDIO_U8;
+      desired.channels = 1;
+      desired.samples = 4096;
+      desired.callback = &AmplitudeSummer::data_cb;
+      SDL_AudioDeviceID dev = SDL_OpenAudioDevice(
+          device.c_str(),
+          1 /*iscapture*/,
+          &desired,
+          &obtained,
+          0 /*no changes*/);
+      if (dev == 0) {
+        ERROR("Failed to open device: %s", device.c_str());
         return false;
       }
+
+      // Tell device to start recording, which is what calls data_cb().
+      SDL_PauseAudioDevice(dev, 0);
+
       // Wait for sample processing thread to accumulate enough samples and exit
       {
         std::unique_lock<std::mutex> lock(mutex);
@@ -72,9 +90,10 @@ namespace {
           cv_notify.wait(lock);
         }
       }
-      // We have to tell SFML to stop, it won't stop on its own.
-      // This calls into onStop() on this thread.
-      stop();
+
+      // Tell device to stop recording.
+      SDL_CloseAudioDevice(dev);
+
       // Produce sample sum
       sum = sum_;
       return true;
@@ -82,13 +101,15 @@ namespace {
 
    protected:
     // Called on separate thread from everything else
-    bool onProcessSamples(const int16_t* samples, size_t samples_len) {
+    void data_cb(void* userdata, uint8_t* stream, int len) {
       if (samples_left == 0) {
         // Sometimes we get an additional call after already returning false.
         // It doesn't hurt anything, but we may as well reduce noise on this thread.
         DEBUG("exiting early, ignoring %lu samples", samples_len);
         return false;
       }
+      // TODO: OLD samples_len, samples_to_get
+      // TODO http://wiki.libsdl.org/SDL_AudioSpec
       size_t samples_to_get = (samples_len > samples_left) ? samples_left : samples_len;
       DEBUG("%lu samples left, %lu in this chunk => get %lu samples",
           samples_left, samples_len, samples_to_get);
@@ -113,6 +134,7 @@ namespace {
     }
 
    private:
+    const std::string device;
     size_t samples_left;
     size_t sum_;
 
@@ -127,16 +149,14 @@ soundview::DeviceSelector::DeviceSelector(status_func_t status_cb)
   : status_cb(status_cb) { }
 
 std::vector<std::string> soundview::DeviceSelector::list_devices() {
-  if (!sf::SoundRecorder::isAvailable()) {
-    LOG("Sound recording unavailable");
-    return std::vector<std::string>();
+  std::vector<std::string> recording_device_names;
+  for (int i = 0; i < SDL_GetNumAudioDevices(1 /* recording */); ++i) {
+    recording_device_names.push_back(std::string(SDL_GetAudioDeviceName(i, 1 /* iscapture */)));
   }
-
-  std::vector<std::string> all_devices = sf::SoundRecorder::getAvailableDevices();
-  if (all_devices.empty()) {
+  if (recording_device_names.empty()) {
     LOG("No sound devices were found");
   }
-  return all_devices;
+  return recording_device_names;
 }
 
 bool soundview::DeviceSelector::auto_select(std::string& device) {

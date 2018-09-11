@@ -27,10 +27,7 @@ add_library(soundview SHARED
 
 target_link_libraries(soundview
   ${fftw_LIBRARY}
-  ${sfml_audio_LIBRARY}
-  ${sfml_graphics_LIBRARY}
-  ${sfml_system_LIBRARY}
-  ${sfml_window_LIBRARY})
+  ${SDL2_LIBRARY})
 
 install(TARGETS soundview
   RUNTIME DESTINATION bin
