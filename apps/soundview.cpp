@@ -43,45 +43,35 @@ namespace {
     }
 
     bool reload() {
-      if (recorder == NULL) {
-        return false;
-      }
-      recorder->stop();
-      bool ret = start();
-      if (!ret) {
-        recorder->start(sample_rate_hz);
-      }
-      return ret;
-    }
-
-    bool start() {
       if (recorder == NULL || selector == NULL) {
         return false;
       }
 
-      std::string device = options_device;
-      if (!device.empty()) {
+      // no-op if recorder isn't running yet:
+      recorder->stop();
+
+      std::string selected_device = options_device;
+      if (!selected_device.empty()) {
         // try to parse specified device as an int index, and map to a device name
         char* invalid_start = NULL;
-        size_t index = strtoul(device.c_str(), &invalid_start, 10);
+        size_t index = strtoul(selected_device.c_str(), &invalid_start, 10);
         // check that no invalid data was provided, and display ids start at 1
         if ((invalid_start == NULL || *invalid_start == '\0') && index > 0) {
           --index; // convert to zero-index
           std::vector<std::string> available_devices = selector->list_devices();
           if (index < available_devices.size()) {
-            device = available_devices[index];
-            LOG("=> Device %lu: %s", (index + 1), device.c_str());
+            selected_device = available_devices[index];
+            LOG("=> Device %lu: %s", (index + 1), selected_device.c_str());
           }
         }
       } else {
         // no device specified in args: auto-detect
-        if (!selector->auto_select(device)) {
+        if (!selector->auto_select(selected_device)) {
           return false;
         }
       }
-      recorder->setDevice(device);
 
-      return recorder->start(sample_rate_hz);
+      return recorder->start(selected_device, sample_rate_hz);
     }
 
    private:
@@ -116,7 +106,7 @@ int main(int argc, char* argv[]) {
       std::bind(&soundview::DisplayRunner::append_freq_data, &display_runner, sp::_1));
   reloader.set_recorder(&recorder);
 
-  if (reloader.start()) {
+  if (reloader.reload()) {
     display_runner.run();
     LOG("Exiting.");
     recorder.stop();

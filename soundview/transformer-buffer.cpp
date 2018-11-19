@@ -18,6 +18,7 @@
 #include "soundview/transformer-buffer.hpp"
 
 #include <fftw3.h>
+#include <SDL2/SDL_audio.h>
 
 #ifdef WIN32
 // no std::min
@@ -50,7 +51,11 @@ soundview::TransformerBuffer::~TransformerBuffer() {
   fftw_cleanup();
 }
 
-void soundview::TransformerBuffer::add(const int16_t* samples, size_t samples_len) {
+int soundview::TransformerBuffer::expected_sdl_format() {
+  return AUDIO_S16;
+}
+
+void soundview::TransformerBuffer::add(const uint8_t* samples, size_t samples_len) {
   // append samples to buf. as buf limit is reached (>=0 times), transform and emit transformed
   size_t samples_offset = 0;
   for (;;) {
@@ -61,6 +66,7 @@ void soundview::TransformerBuffer::add(const int16_t* samples, size_t samples_le
       double* out_ptr = buf_pcm.data() + buf_pcm_filled;
       for (size_t i = 0; i < copy_size; ++i) {
         // direct converstion to dbl for fft:
+        // TODO input data is 16bit signed ints
         *out_ptr = samples[samples_offset + i];
         ++out_ptr;
       }

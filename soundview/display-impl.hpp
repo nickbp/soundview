@@ -20,12 +20,12 @@
 #include <functional>
 #include <vector>
 
-#include <SFML/Graphics/RenderTexture.hpp>
-#include <SFML/Graphics/RenderWindow.hpp>
-
 #include "soundview/double-buffer.hpp"
 #include "soundview/hsl.hpp"
 #include "soundview/options.hpp"
+
+struct SDL_Window;
+struct SDL_Texture;
 
 namespace soundview {
 
@@ -71,9 +71,8 @@ namespace soundview {
     void draw_freq_data_vert(sf::RenderWindow& window, sf::RenderTexture& texture,
         std::vector<std::vector<double> >& freq_sets);
 
-    bool handle_resize(sf::RenderWindow& window, sf::RenderTexture& texture);
-    void handle_resize_horiz();
-    void handle_resize_vert();
+    bool handle_resize(size_t width, size_t height, sf::RenderTexture& texture);
+    void handle_resize_buffers(size_t width, size_t height);
 
     // from options
     const size_t analyzer_thickness_pct;

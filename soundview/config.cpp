@@ -22,6 +22,10 @@ namespace config {
   FILE *fout = stdout, *ferr = stderr;
   bool debug_enabled = false;
 
+  bool is_debug() {
+    return debug_enabled;
+  }
+
   void enable_debug() {
     debug_enabled = true;
   }

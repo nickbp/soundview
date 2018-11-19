@@ -51,6 +51,7 @@ namespace config {
   extern FILE *fout;
   extern FILE *ferr;
 
+  bool LIB_API is_debug();
   void LIB_API enable_debug();
 
   /* DONT USE THESE DIRECTLY, use DEBUG()/LOG()/ERROR() instead.

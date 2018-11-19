@@ -17,7 +17,6 @@
 #include "soundview/config.hpp"
 #include "soundview/display-runner.hpp"
 #include "soundview/display-impl.hpp"
-#include "soundview/hsl.hpp"
 
 soundview::DisplayRunner::DisplayRunner(const Options& options, reload_device_func_t reload_device_func)
   : display_impl(new DisplayImpl(options, reload_device_func)) { }

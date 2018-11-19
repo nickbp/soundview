@@ -17,7 +17,7 @@
 #pragma once
 
 #include <vector>
-#include <SFML/Graphics/Color.hpp>
+#include <SDL2/SDL_pixels.h>
 
 #include "soundview/options.hpp"
 
@@ -34,10 +34,10 @@ namespace soundview {
      * Given a calculated value and a desired luminosity for that value, returns an Android color
      * code. This is a reduced version of the normal HSL->RGB algorithm; it always has S=1.
      */
-    sf::Color valueToColor(double value) const;
+    SDL_Color valueToColor(double value) const;
 
    private:
-    std::vector<sf::Color> precached_vals;
+    std::vector<SDL_Color> precached_vals;
     size_t precached_vals_size;
   };
 

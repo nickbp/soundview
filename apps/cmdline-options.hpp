@@ -35,7 +35,6 @@ class CmdlineOptions : public soundview::Options {
   bool list_devices() const;
   std::string device() const;
 
-  size_t audio_collect_rate_hz() const;
   size_t audio_sample_rate_hz() const;
 
   size_t display_fps_max() const;

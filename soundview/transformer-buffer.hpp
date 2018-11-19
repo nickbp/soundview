@@ -38,7 +38,9 @@ namespace soundview {
     TransformerBuffer(const Options& options, buf_func_t freq_output_cb);
     virtual ~TransformerBuffer();
 
-    void add(const int16_t* samples, size_t samples_len);
+    int expected_sdl_format();
+    void add(const uint8_t* samples, size_t samples_len);
+
     void reset();
 
    private:

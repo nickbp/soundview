@@ -18,8 +18,6 @@
 
 #include <memory>
 
-#include <SFML/Audio/SoundRecorder.hpp>
-
 #include "soundview/transformer-buffer.hpp"
 
 namespace soundview {
@@ -27,16 +25,16 @@ namespace soundview {
   /**
    * Implementation for retrieving audio samples from a device.
    */
-  class LIB_API SoundRecorder : public sf::SoundRecorder {
+  class LIB_API SoundRecorder {
    public:
     SoundRecorder(const Options& options, buf_func_t freq_output_cb);
 
-   protected:
-    bool onProcessSamples(const int16_t* samples, size_t samples_len);
-    void onStop();
+    bool start(const std::string& device, size_t sample_rate_hz);
+    void stop();
 
    private:
     TransformerBuffer buf;
+    uint32_t dev;
   };
 
 }

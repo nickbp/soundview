@@ -18,6 +18,10 @@
 #include <condition_variable>
 #include <limits>
 
+#include <SDL2/SDL.h>
+
+#include <SFML/Graphics/RenderTexture.hpp>
+#include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/Graphics/Image.hpp>
 #include <SFML/Graphics/Sprite.hpp>
 #include <SFML/Graphics/VertexArray.hpp>
@@ -32,19 +36,19 @@ namespace {
   /**
    * Resets a region to black, WITHOUT calling target.clear() which introduces flicker
    */
-  void reset_region(sf::RenderTarget& target, sf::VertexArray& quad,
-      size_t left, size_t right, size_t bottom, size_t top, sf::Color color = sf::Color::Black) {
-    quad[0].position.x = quad[3].position.x = left;
-    quad[1].position.x = quad[2].position.x = right;
-    quad[0].position.y = quad[1].position.y = bottom;
-    quad[2].position.y = quad[3].position.y = top;
-    quad[0].color = quad[1].color = quad[2].color = quad[3].color = color;
-    target.draw(quad);
+  void reset_region(SDL_Renderer* renderer, SDL_Rect& rect,
+      size_t left, size_t right, size_t bottom, size_t top) {
+    rect.x = left;
+    rect.y = top;
+    rect.w = right - left;
+    rect.h = top - bottom;
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderDrawRect(renderer, &rect);
   }
 
-  void reset_all(sf::RenderTarget& target) {
-    sf::VertexArray quad(sf::Quads, 4);
-    reset_region(target, quad,
+  void reset_all(SDL_Renderer* renderer) {
+    SDL_Rect rect;
+    reset_region(renderer, rect,
         0,// left
         target.getSize().x,// right
         0,// bottom
@@ -73,29 +77,64 @@ soundview::DisplayImpl::DisplayImpl(const Options& options, reload_device_func_t
     shutdown(false) { }
 
 void soundview::DisplayImpl::run() {
-  sf::RenderWindow window;
-  if (fullscreen) {
-    window.create(sf::VideoMode::getDesktopMode(), TITLE, sf::Style::Fullscreen);
-  } else {
-    window.create(sf::VideoMode(1024, 640), TITLE, sf::Style::Resize | sf::Style::Close);
+  if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+    ERROR("SDL init failed: %s", SDL_GetError());
+    return;
   }
-  window.setVerticalSyncEnabled(vsync);
-  window.setFramerateLimit(fps_max);
+
+  SDL_Window* window;
+  // TODO add to flags?: "| SDL_WINDOW_OPENGL"
+  if (fullscreen) {
+    // width and height are ignored:
+    window = SDL_CreateWindow(
+        TITLE,
+        SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+        0, 0,
+        SDL_WINDOW_FULLSCREEN_DESKTOP);
+  } else {
+    window = SDL_CreateWindow(
+        TITLE,
+        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+        1024, 640,
+        SDL_WINDOW_RESIZABLE);
+  }
+  if (window == NULL) {
+    ERROR("SDL window creation failed: %s", SDL_GetError());
+    SDL_Quit();
+    return;
+  }
+
+  uint32_t renderer_flags = SDL_RENDERER_ACCELERATED;
+  if (vsync) {
+    renderer_flags |= SDL_RENDERER_PRESENTVSYNC;
+  }
+  SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, renderer_flags);
+  if (renderer == NULL) {
+    ERROR("SDL renderer creation failed: %s", SDL_GetError());
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+    return;
+  }
+
+  SDL_DisableScreenSaver();
+
+  //TODO window.setFramerateLimit(fps_max);
 
   sf::RenderTexture texture;
-  if (!handle_resize(window, texture)) {
-    window.close();
+  if (!handle_resize(window.getView().getSize().x, window.getView().getSize().y, texture)) {
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
     return;
   }
   // init to black so that resizes before voiceprint has filled the screen look clean
   reset_all(texture);
 
   std::vector<std::vector<double> >* freqs = NULL;
-  while (window.isOpen()) {
+  while (1) {
     {
       std::unique_lock<std::mutex> lock(mutex);
       if (shutdown) {
-        window.close();
         break;
       }
       // Grab any output from double buffers
@@ -105,12 +144,17 @@ void soundview::DisplayImpl::run() {
     //TODO this loop is prone to stuttering. maybe add a timer to smooth the rate?
 
     draw_freq_data(window, texture, *freqs);
+    SDL_RenderPresent(renderer);
     freqs->clear();
     bool was_resized = handle_user_events(window);
-    if (was_resized && !handle_resize(window, texture)) {
-      window.close();
+    if (was_resized && !handle_resize(window.getView().getSize().x, window.getView().getSize().y, texture)) {
+      break;
     }
   }
+
+  SDL_DestroyRenderer(renderer);
+  SDL_DestroyWindow(window);
+  SDL_Quit();
 }
 
 // The following are all called on a separate thread from run():
@@ -135,24 +179,25 @@ void soundview::DisplayImpl::exit() {
 // Private:
 
 bool soundview::DisplayImpl::handle_user_events(sf::RenderWindow& window) {
-  sf::Event event;
+  SDL_Event event;
   bool resized = false;
-  while (window.pollEvent(event)) {
+  while (SDL_PollEvent(&event)) {
     switch (event.type) {
-      case sf::Event::Closed:
+      case SDL_QUIT:
         shutdown = true;
         window.close();
         break;
-      case sf::Event::KeyReleased:
-        switch (event.key.code) {
-          case sf::Keyboard::D:
+      case SDL_KEYUP:
+        switch (event.key.keysym.sym) {
+          // TODO also event.key.keysym.mod
+          case SDLK_d:
             // [D]evice reload
             device_max_freq_val = std::numeric_limits<double>::min();
             reload_device_func();
             break;
 
-          case sf::Keyboard::R:
-          case sf::Keyboard::Space:
+          case SDLK_r:
+          case SDLK_SPACE:
             // [R]otate
             horiz = !horiz;
             voiceprint_edge = 0;
@@ -160,19 +205,21 @@ bool soundview::DisplayImpl::handle_user_events(sf::RenderWindow& window) {
             break;
 
           // many ways to exit:
-          case sf::Keyboard::Escape:
-          case sf::Keyboard::Q:
+          case SDLK_ESCAPE:
+          case SDLK_q:
             shutdown = true;
             window.close();
             break;
-          case sf::Keyboard::C:
-            if (event.key.control) { // ^C
+          case SDLK_c:
+            if (event.key.keysym.mod & KMOD_LCTRL
+                || event.key.keysym.mod & KMOD_RCTRL) { // ^C
               shutdown = true;
               window.close();
             }
             break;
-          case sf::Keyboard::F4:
-            if (event.key.alt) { // Alt+F4
+          case SDLK_F4:
+            if (event.key.keysym.mod & KMOD_LALT
+                || event.key.keysym.mod & KMOD_RALT) { // Alt+F4
               shutdown = true;
               window.close();
             }
@@ -182,8 +229,23 @@ bool soundview::DisplayImpl::handle_user_events(sf::RenderWindow& window) {
             break;
         }
         break;
-      case sf::Event::Resized:
-        resized = true;
+      case SDL_WINDOWEVENT:
+        switch (event.window.event) {
+          case SDL_WINDOWEVENT_RESIZED:
+            // Fall through
+          case SDL_WINDOWEVENT_SIZE_CHANGED:
+            // TODO: sizes in event->window.data1 and .data2 (int32_t's)
+            resized = true;
+            break;
+            /* TODO
+          case SDL_WINDOWEVENT_CLOSE:
+            shutdown = true;
+            window.close();
+            break;
+            */
+          default:
+            break;
+        }
         break;
       default:
         break;
@@ -253,8 +315,9 @@ void soundview::DisplayImpl::draw_freq_data_horiz(
         quad[0].position.y = quad[1].position.y = bucket_y;// bottom
         bucket_y -= bucket_widths[i];
         quad[2].position.y = quad[3].position.y = bucket_y;// top
+        SDL_Color c = hsl.valueToColor(val_relative);
         quad[0].color = quad[1].color = quad[2].color = quad[3].color
-          = hsl.valueToColor(val_relative);
+          = sf::Color(c.r, c.g, c.b, c.a);
         texture.draw(quad);
       }
 
@@ -270,8 +333,9 @@ void soundview::DisplayImpl::draw_freq_data_horiz(
           quad[0].position.y = quad[1].position.y = bucket_y;// bottom
           bucket_y -= bucket_widths[i];
           quad[2].position.y = quad[3].position.y = bucket_y;// top
+          SDL_Color c = hsl.valueToColor(data[i] / device_max_freq_val);
           quad[0].color = quad[1].color = quad[2].color = quad[3].color
-            = hsl.valueToColor(data[i] / device_max_freq_val);
+            = sf::Color(c.r, c.g, c.b, c.a);
           texture.draw(quad);
         }
       }
@@ -314,8 +378,9 @@ void soundview::DisplayImpl::draw_freq_data_horiz(
       quad[0].position.y = quad[1].position.y = bucket_y;// bottom
       bucket_y -= bucket_widths[i];
       quad[2].position.y = quad[3].position.y = bucket_y;// top
+      SDL_Color c = hsl.valueToColor(val_relative);
       quad[0].color = quad[1].color = quad[2].color = quad[3].color
-        = hsl.valueToColor(val_relative);
+        = sf::Color(c.r, c.g, c.b, c.a);
       texture.draw(quad);
     }
   }
@@ -412,8 +477,9 @@ void soundview::DisplayImpl::draw_freq_data_vert(
         quad[0].position.x = quad[3].position.x = bucket_x;// left
         bucket_x += bucket_widths[i];
         quad[1].position.x = quad[2].position.x = bucket_x;// right
+        SDL_Color c = hsl.valueToColor(val_relative);
         quad[0].color = quad[1].color = quad[2].color = quad[3].color
-          = hsl.valueToColor(val_relative);
+          = sf::Color(c.r, c.g, c.b, c.a);
         texture.draw(quad);
       }
 
@@ -430,8 +496,9 @@ void soundview::DisplayImpl::draw_freq_data_vert(
           quad[0].position.x = quad[3].position.x = bucket_x;// left
           bucket_x += bucket_widths[i];
           quad[1].position.x = quad[2].position.x = bucket_x;// right
+          SDL_Color c = hsl.valueToColor(data[i] / device_max_freq_val);
           quad[0].color = quad[1].color = quad[2].color = quad[3].color
-            = hsl.valueToColor(data[i] / device_max_freq_val);
+            = sf::Color(c.r, c.g, c.b, c.a);
           texture.draw(quad);
         }
       }
@@ -473,8 +540,9 @@ void soundview::DisplayImpl::draw_freq_data_vert(
       quad[1].position.x = quad[2].position.x = bucket_x;// left
       bucket_x += bucket_widths[i];
       quad[0].position.x = quad[3].position.x = bucket_x;// right
+      SDL_Color c = hsl.valueToColor(val_relative);
       quad[0].color = quad[1].color = quad[2].color = quad[3].color
-        = hsl.valueToColor(val_relative);
+        = sf::Color(c.r, c.g, c.b, c.a);
       texture.draw(quad);
     }
   }
@@ -521,10 +589,9 @@ void soundview::DisplayImpl::draw_freq_data_vert(
 }
 
 bool soundview::DisplayImpl::handle_resize(
-    sf::RenderWindow& window,
-    sf::RenderTexture& texture) {
-  window_width = window.getView().getSize().x;
-  window_height = window.getView().getSize().y;
+    size_t width, size_t height, sf::RenderTexture& texture) {
+  window_width = width;
+  window_height = height;
 
   if (!texture.create(window_width, window_height)) {
     ERROR("Failed to create texture of width %lu, height %lu",
@@ -534,20 +601,20 @@ bool soundview::DisplayImpl::handle_resize(
   reset_all(texture);
 
   if (horiz) {
-    handle_resize_horiz();
+    handle_resize_buffers(width, height);
   } else {
-    handle_resize_vert();
+    handle_resize_buffers(height, width);
   }
   return true;
 }
 
-void soundview::DisplayImpl::handle_resize_horiz() {
+void soundview::DisplayImpl::handle_resize_buffers(size_t width, size_t height) {
   // analyzer on right edge, with voiceprint getting the remainder
-  analyzer_thickness = 0.01 * analyzer_thickness_pct * window_width;
+  analyzer_thickness = 0.01 * analyzer_thickness_pct * width;
 
   // Update scaled bucket widths to window height
-  if (window_height != bucket_cached_view_size) {
-    bucket_cached_view_size = window_height;
+  if (height != bucket_cached_view_size) {
+    bucket_cached_view_size = height;
     if (bucket_widths.empty()) {
       bucket_widths.resize(bucket_count);
     }
@@ -559,34 +626,7 @@ void soundview::DisplayImpl::handle_resize_horiz() {
     // Scaled formula:
     //   pxlen = (bucket_count - data_i)^scale * (scale + 1) / bucket_count^(scale + 1)
     const double multiplier =
-      window_height * (bucket_bass_exaggeration + 1)
-      / pow(bucket_count, bucket_bass_exaggeration + 1);
-    for (size_t data_i = 0; data_i < bucket_count; ++data_i) {
-      bucket_widths[data_i] = pow(bucket_count - data_i, bucket_bass_exaggeration) * multiplier;
-    }
-  }
-
-}
-
-void soundview::DisplayImpl::handle_resize_vert() {
-  // analyzer on top edge, with voiceprint getting the remainder
-  analyzer_thickness = 0.01 * analyzer_thickness_pct * window_height;
-
-  // Update scaled bucket widths to window width
-  if (window_width != bucket_cached_view_size) {
-    bucket_cached_view_size = window_width;
-    if (bucket_widths.empty()) {
-      bucket_widths.resize(bucket_count);
-    }
-
-    // Formula:
-    //   pxlen = (bucket_count - data_i)^scale / bucket_count^scale
-    // Integrate over data_i from 0 to bucket_count:
-    //   sum(pxlen) = bucket_count / (scale + 1)
-    // Scaled formula:
-    //   pxlen = (bucket_count - data_i)^scale * (scale + 1) / bucket_count^(scale + 1)
-    const double multiplier =
-      window_width * (bucket_bass_exaggeration + 1)
+      height * (bucket_bass_exaggeration + 1)
       / pow(bucket_count, bucket_bass_exaggeration + 1);
     for (size_t data_i = 0; data_i < bucket_count; ++data_i) {
       bucket_widths[data_i] = pow(bucket_count - data_i, bucket_bass_exaggeration) * multiplier;

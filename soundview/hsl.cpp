@@ -56,23 +56,24 @@ namespace {
     }
   }
 
-  sf::Color valueToColor(double max_lum, double lum_exponent, double value) {
+  SDL_Color valueToColor(double max_lum, double lum_exponent, double value) {
     double lum = std::min(max_lum, pow(value, lum_exponent));
 
     double H = ONE_THIRD * (1 - value);
     lum *= 2;
+    SDL_Color c;
+    c.a = 0xFF;
     if (lum < 1) {
-      return sf::Color(
-          hueToRgbValWithP0(lum, H + ONE_THIRD) * 255,
-          hueToRgbValWithP0(lum, H) * 255,
-          hueToRgbValWithP0(lum, H - ONE_THIRD) * 255);
+      c.r = hueToRgbValWithP0(lum, H + ONE_THIRD) * 255;
+      c.g = hueToRgbValWithP0(lum, H) * 255;
+      c.b = hueToRgbValWithP0(lum, H - ONE_THIRD) * 255;
     } else {
       lum -= 1;
-      return sf::Color(
-          hueToRgbValWithQ1(lum, H + ONE_THIRD) * 255,
-          hueToRgbValWithQ1(lum, H) * 255,
-          hueToRgbValWithQ1(lum, H - ONE_THIRD) * 255);
+      c.r = hueToRgbValWithQ1(lum, H + ONE_THIRD) * 255;
+      c.g = hueToRgbValWithQ1(lum, H) * 255;
+      c.b = hueToRgbValWithQ1(lum, H - ONE_THIRD) * 255;
     }
+    return c;
   }
 }
 
@@ -86,7 +87,7 @@ soundview::HSL::HSL(const Options& options) {
   precached_vals_size = precached_vals.size();
 }
 
-sf::Color soundview::HSL::valueToColor(double value) const {
+SDL_Color soundview::HSL::valueToColor(double value) const {
   size_t max_index = precached_vals_size - 1;
   size_t index = value * precached_vals_size;
   if (index > max_index) {

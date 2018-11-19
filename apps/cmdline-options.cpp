@@ -30,7 +30,6 @@
 #define LIST_DEVICES "list-devices"
 #define DEVICE "device"
 
-#define AUDIO_COLLECT_RATE "collect-rate"
 #define AUDIO_SAMPLE_RATE "sample-rate"
 
 #define FULLSCREEN "fullscreen"
@@ -91,9 +90,6 @@ CmdlineOptions::CmdlineOptions(int argc, char* argv[])
     ;
 
   options->add_options("Audio input")
-    (AUDIO_COLLECT_RATE,
-        "How frequently to collect blocks of samples produced by the device, in Hz",
-        cxxopts::value<size_t>()->default_value("60"))
     (AUDIO_SAMPLE_RATE,
         "Sample rate for the device audio stream, in Hz",
         cxxopts::value<size_t>()->default_value("176400"))
@@ -160,9 +156,6 @@ std::string CmdlineOptions::device() const {
   return (*options)[DEVICE].as<std::string>();
 }
 
-size_t CmdlineOptions::audio_collect_rate_hz() const {
-  return get_uint(*options, AUDIO_COLLECT_RATE, 1);
-}
 size_t CmdlineOptions::audio_sample_rate_hz() const {
   return get_uint(*options, AUDIO_SAMPLE_RATE, 1);
 }

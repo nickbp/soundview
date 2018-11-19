@@ -28,7 +28,6 @@ namespace soundview {
     virtual bool list_devices() const = 0;
     virtual std::string device() const = 0;
 
-    virtual size_t audio_collect_rate_hz() const = 0;
     virtual size_t audio_sample_rate_hz() const = 0;
 
     virtual size_t display_fps_max() const = 0;

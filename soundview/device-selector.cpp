@@ -35,8 +35,6 @@ namespace {
 
   // number of samples to collect for analysis
   const static size_t SAMPLE_COUNT = 1000;
-  // period at which sfml sends samples to us
-  const static double SECS_PER_ROUND = 0.01;
 
   /**
    * Used for device auto-selection. Records a sample of PCM data from a given
@@ -61,13 +59,16 @@ namespace {
       }
 
       SDL_AudioSpec desired, obtained;
-      SDL_zero(&desired);
+      memset(&desired, 0, sizeof(desired));
+      memset(&obtained, 0, sizeof(obtained));
+
       // Just go with something super basic and low-quality:
       desired.freq = 11025;
       desired.format = AUDIO_U8;
       desired.channels = 1;
       desired.samples = 4096;
       desired.callback = &AmplitudeSummer::data_cb;
+      desired.userdata = this;
       SDL_AudioDeviceID dev = SDL_OpenAudioDevice(
           device.c_str(),
           1 /*iscapture*/,
@@ -99,41 +100,38 @@ namespace {
       return true;
     }
 
-   protected:
+   private:
     // Called on separate thread from everything else
-    void data_cb(void* userdata, uint8_t* stream, int len) {
-      if (samples_left == 0) {
-        // Sometimes we get an additional call after already returning false.
-        // It doesn't hurt anything, but we may as well reduce noise on this thread.
+    static void data_cb(void* userdata, uint8_t* samples, int samples_len) {
+      AmplitudeSummer* as = static_cast<AmplitudeSummer*>(userdata);
+
+      if (as->samples_left == 0) {
+        // Drop data if no longer needed
         DEBUG("exiting early, ignoring %lu samples", samples_len);
-        return false;
+        return;
       }
-      // TODO: OLD samples_len, samples_to_get
-      // TODO http://wiki.libsdl.org/SDL_AudioSpec
-      size_t samples_to_get = (samples_len > samples_left) ? samples_left : samples_len;
+
+      size_t samples_to_get = (samples_len > (int64_t)as->samples_left) ? as->samples_left : samples_len;
       DEBUG("%lu samples left, %lu in this chunk => get %lu samples",
-          samples_left, samples_len, samples_to_get);
+          as->samples_left, samples_len, samples_to_get);
       for (size_t i = 0; i < samples_to_get; ++i) {
-        sum_ += std::abs(samples[i]);
+        as->sum_ += std::abs(samples[i]);
       }
-      samples_left -= samples_to_get;
-      if (samples_left == 0) {
-        // Other thread will be notified when onStop() is called by SFML
-        DEBUG("no more samples needed with sum %lu", sum_);
+      as->samples_left -= samples_to_get;
+      if (as->samples_left == 0) {
+        // Notify other thread to stop sampling
+        DEBUG("no more samples needed with sum %lu", as->sum_);
         {
-          std::unique_lock<std::mutex> lock(mutex);
+          std::unique_lock<std::mutex> lock(as->mutex);
           DEBUG("notify should_stop");
-          ready_to_stop = true;
-          cv_notify.notify_all();
+          as->ready_to_stop = true;
+          as->cv_notify.notify_all();
         }
-        return false;
       } else {
-        DEBUG("%lu samples left with sum %lu", samples_left, sum_);
-        return true;
+        DEBUG("%lu samples left with sum %lu", as->samples_left, as->sum_);
       }
     }
 
-   private:
     const std::string device;
     size_t samples_left;
     size_t sum_;
